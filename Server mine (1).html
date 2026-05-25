@@ -1,0 +1,467 @@
+<meta name='viewport' content='width=device-width, initial-scale=1'/><!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Liquid Glass — Premium Antistress</title>
+    <style>
+        :root {
+            --accent: #00f0ff;
+            --bg-glass: rgba(15, 15, 20, 0.4);
+            --border-glass: rgba(255, 255, 255, 0.08);
+        }
+        
+        body, html { 
+            margin: 0; padding: 0; width: 100%; height: 100%;
+            background: #000000; /* OLED TRUE BLACK */
+            overflow: hidden; 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
+            touch-action: none;
+            -webkit-user-select: none; user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        canvas { 
+            position: absolute; top: 0; left: 0; z-index: 1; 
+            /* Курсор меняется для понимания интерактивности */
+            cursor: crosshair;
+        }
+
+        /* Глассморфизм */
+        .glass { 
+            backdrop-filter: blur(25px); -webkit-backdrop-filter: blur(25px);
+            background: var(--bg-glass); 
+            border: 1px solid var(--border-glass); 
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8);
+        }
+
+        /* Главное стартовое меню */
+        #mainMenu {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 100; display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            background: #000000;
+            transition: opacity 0.6s ease, transform 0.6s ease;
+        }
+        #mainMenu.hidden {
+            opacity: 0; pointer-events: none; transform: scale(1.05);
+        }
+        
+        .menu-title {
+            font-size: 48px; font-weight: 900; color: #fff;
+            letter-spacing: 2px; margin-bottom: 10px;
+            text-align: center;
+            text-shadow: 0 0 30px rgba(255, 255, 255, 0.2);
+        }
+        
+        .tags-container {
+            display: flex; gap: 10px; flex-wrap: wrap; justify-content: center;
+            margin-bottom: 50px; max-width: 400px;
+        }
+        .tag {
+            font-size: 11px; font-weight: 700; letter-spacing: 1px;
+            color: var(--accent); border: 1px solid rgba(0, 240, 255, 0.3);
+            padding: 6px 12px; border-radius: 20px; text-transform: uppercase;
+            background: rgba(0, 240, 255, 0.05);
+        }
+
+        .start-btn {
+            padding: 18px 45px; font-size: 16px; font-weight: 600;
+            color: #000; background: #fff; border: none; border-radius: 30px;
+            cursor: pointer; transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+        }
+        .start-btn:hover {
+            transform: scale(1.05); background: var(--accent);
+            box-shadow: 0 0 30px rgba(0, 240, 255, 0.4);
+        }
+
+        /* Кнопка «Глаз» */
+        #eye { 
+            position: absolute; top: 30px; right: 30px; 
+            width: 46px; height: 46px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center; 
+            font-size: 20px; cursor: pointer; z-index: 10;
+            transition: all 0.3s ease; color: rgba(255,255,255,0.7);
+        }
+        #eye:hover { background: rgba(255,255,255,0.1); color: #fff; }
+
+        /* Нижнее док-меню */
+        .menu-container {
+            position: absolute; bottom: 35px; left: 50%; transform: translateX(-50%);
+            width: 92%; max-width: 800px; z-index: 10; padding: 8px;
+            border-radius: 24px;
+            opacity: 0; transition: all 0.6s cubic-bezier(0.19, 1, 0.22, 1);
+            pointer-events: none; /* Выключено до старта */
+        }
+        .menu-container.show { opacity: 1; pointer-events: auto; }
+        
+        .menu { 
+            display: flex; gap: 10px; overflow-x: auto; padding: 4px;
+            scrollbar-width: none;
+        }
+        .menu::-webkit-scrollbar { display: none; }
+
+        .btn { 
+            padding: 14px 24px; color: rgba(255, 255, 255, 0.5); 
+            cursor: pointer; border-radius: 16px; white-space: nowrap; 
+            font-size: 14px; font-weight: 600; letter-spacing: 0.3px;
+            transition: all 0.2s ease; background: transparent;
+        }
+        .btn:hover { color: #fff; background: rgba(255, 255, 255, 0.05); }
+        .btn.active {
+            color: #000; background: #fff;
+            box-shadow: 0 4px 15px rgba(255, 255, 255, 0.3);
+        }
+        
+        /* Скрытие интерфейса */
+        .ui-hidden {
+            opacity: 0 !important; pointer-events: none !important;
+            transform: translate(-50%, 20px) scale(0.95) !important;
+        }
+        #eye.ui-hidden-eye { opacity: 0.2; background: transparent; border-color: transparent; box-shadow: none; }
+    </style>
+</head>
+<body>
+
+    <!-- Главное Меню -->
+    <div id="mainMenu">
+        <div class="menu-title">LENS GLASS</div>
+        <div class="tags-container">
+            <div class="tag">OLED True Black</div>
+            <div class="tag">120Hz Unlocked</div>
+            <div class="tag">Premium Physics</div>
+            <div class="tag">Endless Gameplay</div>
+        </div>
+        <button class="start-btn" onclick="enterApp()">Launch Interface</button>
+    </div>
+
+    <!-- Интерфейс программы -->
+    <div id="eye" class="glass" onclick="toggleUI()">👁️</div>
+    <div class="menu-container glass" id="menuContainer">
+        <div class="menu" id="menu"></div>
+    </div>
+    
+    <canvas id="c"></canvas>
+
+<script>
+    const c = document.getElementById('c'), ctx = c.getContext('2d');
+    let W, H, dpr, mode = 0, pts = [], time = 0;
+    
+    // Координаты физического воздействия
+    let mouse = { x: -1000, y: -1000, active: false, vx: 0, vy: 0 };
+    let lastMouse = { x: -1000, y: -1000 };
+    let uiVisible = true;
+
+    function resize() {
+        dpr = window.devicePixelRatio || 1;
+        W = window.innerWidth; H = window.innerHeight;
+        c.width = W * dpr; c.height = H * dpr;
+        c.style.width = W + 'px'; c.style.height = H + 'px';
+        ctx.scale(dpr, dpr);
+        initMode();
+    }
+
+    // 8 ИНТЕРАКТИВНЫХ ФИЗИЧЕСКИХ ДВИЖКОВ ("Геймплейные" антистрессы)
+    const modes = [
+        { name: "🐍 Неоновая Нить", init: () => {
+            // Кинематическая цепь, тянущаяся за пальцем
+            for(let i=0; i<60; i++) pts.push({x: W/2, y: H/2});
+        }},
+        { name: "🧲 Магнитное Поле", init: () => {
+            // Улучшенный магнит
+        }},
+        { name: "🕸️ Грави-Сетка", init: () => {
+            // Сетка, которая деформируется от пальца
+            let step = 45;
+            for(let x=0; x<W+step; x+=step) {
+                for(let y=0; y<H+step; y+=step) {
+                    pts.push({ baseX: x, baseY: y, x: x, y: y, vx: 0, vy: 0 });
+                }
+            }
+        }},
+        { name: "🐝 Рой Частиц", init: () => {
+            // Частицы летят за пальцем, но отталкиваются друг от друга
+            for(let i=0; i<150; i++) pts.push({x: Math.random()*W, y: Math.random()*H, vx: 0, vy: 0, r: Math.random()*3+2, c: Math.random()*360});
+        }},
+        { name: "🌊 Жидкий Эквалайзер", init: () => {
+            // Волны, реагирующие на близость пальца
+            let count = Math.floor(W / 15);
+            for(let i=0; i<count; i++) pts.push({x: i*15 + 7.5, h: 10, v: 0});
+        }},
+        { name: "🪐 Орбитальная Пыль", init: () => {
+            // Частицы захватываются в орбиту пальца
+            for(let i=0; i<200; i++) pts.push({a: Math.random()*Math.PI*2, dist: Math.random()*400+50, speed: (Math.random()-0.5)*0.05, size: Math.random()*2+1});
+        }},
+        { name: "💥 Энерго-Сфера", init: () => {
+            // Точки убегают от пальца образуя пустую сферу
+            for(let i=0; i<400; i++) pts.push({x: Math.random()*W, y: Math.random()*H, vx: 0, vy: 0});
+        }},
+        { name: "✨ Шлейф Звезд", init: () => {
+            // Классический спавнер при движении
+            pts = [];
+        }}
+    ];
+
+    // Генерация меню
+    const menu = document.getElementById('menu');
+    modes.forEach((m, i) => {
+        const d = document.createElement('div');
+        d.className = `btn ${i === 0 ? 'active' : ''}`; 
+        d.innerText = m.name;
+        d.onclick = () => {
+            document.querySelectorAll('.btn').forEach(b => b.classList.remove('active'));
+            d.classList.add('active');
+            mode = i; initMode();
+        };
+        menu.appendChild(d);
+    });
+
+    function initMode() {
+        pts = []; time = 0;
+        modes[mode].init();
+    }
+
+    function draw() {
+        time += 0.01;
+        
+        // Вычисление скорости мыши для физики
+        mouse.vx = mouse.x - lastMouse.x;
+        mouse.vy = mouse.y - lastMouse.y;
+        lastMouse.x = mouse.x; lastMouse.y = mouse.y;
+
+        // OLED очистка экрана
+        ctx.fillStyle = "#000000";
+        ctx.fillRect(0, 0, W, H);
+
+        // ==========================================
+        // 1. НЕОНОВАЯ НИТЬ (Обратная кинематика)
+        // ==========================================
+        if (mode === 0) { 
+            pts[0].x += (mouse.x - pts[0].x) * 0.3;
+            pts[0].y += (mouse.y - pts[0].y) * 0.3;
+            for(let i=1; i<pts.length; i++) {
+                let dx = pts[i-1].x - pts[i].x, dy = pts[i-1].y - pts[i].y;
+                let angle = Math.atan2(dy, dx);
+                pts[i].x = pts[i-1].x - Math.cos(angle) * 12; // 12 - длина сегмента
+                pts[i].y = pts[i-1].y - Math.sin(angle) * 12;
+            }
+            // Отрисовка красивой толстой линии
+            ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+            for(let i=1; i<pts.length; i++) {
+                ctx.beginPath(); ctx.moveTo(pts[i-1].x, pts[i-1].y); ctx.lineTo(pts[i].x, pts[i].y);
+                ctx.lineWidth = 30 - (i * 0.4);
+                ctx.strokeStyle = `hsla(${(time*100 - i*2)%360}, 100%, 60%, ${1 - i/pts.length})`;
+                ctx.stroke();
+            }
+
+        // ==========================================
+        // 2. МАГНИТНОЕ ПОЛЕ (Идеальная версия)
+        // ==========================================
+        } else if (mode === 1) { 
+            let step = 40;
+            for(let x = step/2; x < W; x += step) {
+                for(let y = step/2; y < H; y += step) {
+                    let dx = mouse.x - x, dy = mouse.y - y, dist = Math.hypot(dx, dy);
+                    let angle = Math.atan2(dy, dx);
+                    // Радиус действия магнита
+                    let influence = Math.max(0, 1 - dist/500); 
+                    let len = 8 + influence * 30; // Удлиняются ближе к пальцу
+                    
+                    ctx.save(); ctx.translate(x, y); ctx.rotate(angle);
+                    ctx.strokeStyle = `hsla(${200 + influence*100}, 100%, 60%, ${0.2 + influence})`;
+                    ctx.lineWidth = 2 + influence*2;
+                    ctx.lineCap = 'round';
+                    ctx.beginPath(); ctx.moveTo(-len/2, 0); ctx.lineTo(len/2, 0); ctx.stroke();
+                    ctx.restore();
+                }
+            }
+
+        // ==========================================
+        // 3. ГРАВИ-СЕТКА (Эластичная деформация)
+        // ==========================================
+        } else if (mode === 2) { 
+            pts.forEach(p => {
+                // Притяжение/отталкивание от мыши
+                let dx = mouse.x - p.x, dy = mouse.y - p.y, dist = Math.hypot(dx, dy);
+                if(dist < 200) {
+                    let force = (200 - dist) / 200;
+                    p.vx -= (dx / dist) * force * (mouse.active ? -2 : 2); // Отталкивание, по клику - притяжение
+                }
+                // Возврат на базовую позицию (пружина)
+                p.vx += (p.baseX - p.x) * 0.05; p.vy += (p.baseY - p.y) * 0.05;
+                p.x += p.vx; p.y += p.vy;
+                p.vx *= 0.8; p.vy *= 0.8; // Трение
+                
+                let distToBase = Math.hypot(p.baseX-p.x, p.baseY-p.y);
+                ctx.fillStyle = `hsla(${distToBase*4}, 100%, 60%, ${0.3 + distToBase/50})`;
+                ctx.beginPath(); ctx.arc(p.x, p.y, 2 + distToBase/10, 0, Math.PI*2); ctx.fill();
+            });
+
+        // ==========================================
+        // 4. РОЙ ЧАСТИЦ (Boids)
+        // ==========================================
+        } else if (mode === 3) {
+            pts.forEach((p, i) => {
+                let dx = mouse.x - p.x, dy = mouse.y - p.y, dist = Math.hypot(dx, dy);
+                // Летят к мыши
+                p.vx += dx * 0.001; p.vy += dy * 0.001;
+                
+                // Отталкиваются друг от друга
+                for(let j=i+1; j<pts.length; j++) {
+                    let p2 = pts[j];
+                    let dDx = p.x - p2.x, dDy = p.y - p2.y, dDist = Math.hypot(dDx, dDy);
+                    if(dDist < 30) {
+                        p.vx += dDx/dDist * 0.2; p.vy += dDy/dDist * 0.2;
+                        p2.vx -= dDx/dDist * 0.2; p2.vy -= dDy/dDist * 0.2;
+                    }
+                }
+                
+                p.vx *= 0.95; p.vy *= 0.95; // Трение
+                p.x += p.vx; p.y += p.vy;
+                
+                ctx.fillStyle = `hsl(${p.c}, 100%, 60%)`;
+                ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI*2); ctx.fill();
+            });
+
+        // ==========================================
+        // 5. ЖИДКИЙ ЭКВАЛАЙЗЕР
+        // ==========================================
+        } else if (mode === 4) {
+            pts.forEach(p => {
+                let dx = mouse.x - p.x, dist = Math.abs(dx);
+                let targetH = 10;
+                if(dist < 150) {
+                    targetH = 10 + (150 - dist) * 1.5; // Волна поднимается у пальца
+                }
+                // Пружина
+                p.v += (targetH - p.h) * 0.1;
+                p.v *= 0.8;
+                p.h += p.v;
+
+                ctx.fillStyle = `hsla(${280 + p.h/2}, 100%, 60%, 0.8)`;
+                // Рисуем столбик от центра экрана
+                ctx.fillRect(p.x - 5, H/2 - p.h, 10, p.h * 2);
+            });
+
+        // ==========================================
+        // 6. ОРБИТАЛЬНАЯ ПЫЛЬ
+        // ==========================================
+        } else if (mode === 5) {
+            pts.forEach(p => {
+                p.a += p.speed * (mouse.active ? 2 : 1); // Ускорение при нажатии
+                // Плавно меняем радиус орбиты на основе расстояния
+                let targetDist = Math.max(20, p.dist + (mouse.active ? -100 : 0));
+                
+                let x = mouse.x + Math.cos(p.a) * targetDist;
+                let y = mouse.y + Math.sin(p.a) * targetDist;
+                
+                ctx.fillStyle = `hsla(${(p.dist + time*100)%360}, 80%, 70%, 0.8)`;
+                ctx.beginPath(); ctx.arc(x, y, p.size, 0, Math.PI*2); ctx.fill();
+            });
+
+        // ==========================================
+        // 7. ЭНЕРГО-СФЕРА (Расталкивание)
+        // ==========================================
+        } else if (mode === 6) {
+            pts.forEach(p => {
+                // Возврат в центр экрана
+                p.vx += (W/2 - p.x) * 0.001; p.vy += (H/2 - p.y) * 0.001;
+                
+                let dx = mouse.x - p.x, dy = mouse.y - p.y, dist = Math.hypot(dx, dy);
+                if(dist < 150) { // Отталкивание от пальца образует дыру
+                    let force = (150 - dist) * 0.05;
+                    p.vx -= (dx / dist) * force; p.vy -= (dy / dist) * force;
+                }
+                
+                p.vx *= 0.96; p.vy *= 0.96;
+                p.x += p.vx; p.y += p.vy;
+                
+                let speed = Math.hypot(p.vx, p.vy);
+                ctx.fillStyle = `hsla(${180 + speed*10}, 100%, 60%, ${0.3 + Math.min(1, speed/10)})`;
+                ctx.fillRect(p.x, p.y, 2.5, 2.5);
+            });
+
+        // ==========================================
+        // 8. ШЛЕЙФ ЗВЕЗД (Рисование искр)
+        // ==========================================
+        } else if (mode === 7) {
+            let spd = Math.hypot(mouse.vx, mouse.vy);
+            if(spd > 2 || mouse.active) {
+                // Создаем частицы при движении
+                for(let i=0; i<3; i++) {
+                    pts.push({
+                        x: mouse.x, y: mouse.y, 
+                        vx: (Math.random()-0.5)*spd*0.5 + (Math.random()-0.5)*2,
+                        vy: (Math.random()-0.5)*spd*0.5 + (Math.random()-0.5)*2,
+                        life: 1.0, c: Math.random()*60 + 300 // Розово-пурпурные
+                    });
+                }
+            }
+            for(let i = pts.length-1; i >= 0; i--) {
+                let p = pts[i];
+                p.x += p.vx; p.y += p.vy;
+                p.life -= 0.02; // Частица затухает
+                if(p.life <= 0) { pts.splice(i, 1); continue; }
+                
+                ctx.fillStyle = `hsla(${p.c}, 100%, 70%, ${p.life})`;
+                ctx.beginPath(); ctx.arc(p.x, p.y, p.life*4, 0, Math.PI*2); ctx.fill();
+            }
+        }
+
+        requestAnimationFrame(draw);
+    }
+
+    // ==========================================
+    // ВАЖНО: СОБЫТИЯ ВЕШАЕМ ТОЛЬКО НА CANVAS
+    // Это исправляет баг ложных срабатываний меню
+    // ==========================================
+    function updateMouse(e) {
+        if(e.touches && e.touches.length > 0) {
+            mouse.x = e.touches[0].clientX;
+            mouse.y = e.touches[0].clientY;
+        } else if (e.clientX !== undefined) {
+            mouse.x = e.clientX;
+            mouse.y = e.clientY;
+        }
+    }
+    
+    // Предотвращаем скролл экрана при возне по холсту
+    c.addEventListener('touchstart', (e) => { e.preventDefault(); mouse.active = true; updateMouse(e); }, {passive: false});
+    c.addEventListener('touchmove', (e) => { e.preventDefault(); updateMouse(e); }, {passive: false});
+    c.addEventListener('touchend', () => { mouse.active = false; });
+    
+    c.addEventListener('mousedown', (e) => { mouse.active = true; updateMouse(e); });
+    c.addEventListener('mousemove', updateMouse);
+    c.addEventListener('mouseup', () => { mouse.active = false; });
+    c.addEventListener('mouseleave', () => { mouse.x = -1000; mouse.y = -1000; mouse.active = false; });
+    
+    window.addEventListener('resize', resize);
+    
+    // Логика UI
+    function enterApp() {
+        document.getElementById('mainMenu').classList.add('hidden');
+        setTimeout(() => {
+            document.getElementById('menuContainer').classList.add('show');
+            mouse.x = W/2; mouse.y = H/2; // Стартовая точка в центре
+        }, 400);
+    }
+
+    function toggleUI() {
+        uiVisible = !uiVisible;
+        const menuContainer = document.getElementById('menuContainer');
+        const eye = document.getElementById('eye');
+        if(!uiVisible) {
+            menuContainer.classList.add('ui-hidden');
+            eye.classList.add('ui-hidden-eye');
+        } else {
+            menuContainer.classList.remove('ui-hidden');
+            eye.classList.remove('ui-hidden-eye');
+        }
+    }
+
+    // Запуск
+    resize();
+    draw();
+</script>
+</body>
+</html>
